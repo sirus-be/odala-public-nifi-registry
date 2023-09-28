@@ -1,0 +1,81 @@
+apiVersion: v1          
+kind: Service           
+metadata:               
+  name: nifi-registry-service    
+spec:                   
+  selector:             
+    app: nifi-registry          
+  ports:                
+  - protocol: TCP       
+    targetPort: 18080    
+    port: 18080          
+    name: ui          
+
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nifi-registry
+  labels:
+    app: nifi-registry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nifi-registry
+  serviceName: nifi-registry-service
+  template:
+    metadata:
+      labels:
+        app: nifi-registry
+    spec:
+      containers:
+      - name: nifi-registry
+        image: apache/nifi-registry:1.15.3       
+        resources:
+          requests:
+            cpu: ".5"
+            memory: "500Mi"
+          limits:
+            memory: "500Mi"
+            cpu: ".5"
+        ports:
+        - containerPort: 18080
+        env:
+          - name: SINGLE_USER_CREDENTIALS_USERNAME
+            value: "+PLACEHOLDER_SINGLE_USER_CREDENTIALS_USERNAME+"
+          - name: SINGLE_USER_CREDENTIALS_PASSWORD
+            value: "+PLACEHOLDER_SINGLE_USER_CREDENTIALS_PASSWORD+"
+        volumeMounts:
+        - mountPath: /opt/nifi-registry/nifi-registry-current/flow_storage
+          name: nifi-registry-flow-storage
+        - mountPath: /opt/nifi-registry/nifi-registry-current/database/
+          name: nifi-registry-database 
+  volumeClaimTemplates:
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: nifi-registry-flow-storage
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 2Gi
+        volumeMode: Filesystem
+      status:
+        phase: Pending
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: nifi-registry-database
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 2Gi
+        volumeMode: Filesystem
+      status:
+        phase: Pending
